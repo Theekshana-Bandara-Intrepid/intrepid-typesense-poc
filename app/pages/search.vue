@@ -32,10 +32,6 @@ watch(page, async () => {
 })
 
 onMounted(async () => {
-  if (!query.value) {
-    query.value = 'Sri Lanka'
-    searchQuery.value = query.value
-  }
   await performSearch()
 })
 </script>

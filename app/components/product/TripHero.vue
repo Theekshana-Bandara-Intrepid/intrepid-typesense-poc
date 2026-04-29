@@ -11,7 +11,7 @@ const showGallery = ref(false)
   <div class="hero" id="trip-hero">
     <!-- Main large image -->
     <div class="hero-main" @click="activeIndex = 0; showGallery = true">
-      <img :src="images[0]?.url" :alt="images[0]?.alt" loading="eager" />
+      <img :src="images[0]?.url" :alt="images[0]?.alt" loading="eager" @error="(e) => (e.target as HTMLImageElement).src = 'https://placehold.co/800x600?text=Image+Not+Found'" />
     </div>
 
     <!-- Thumbnail strip below -->
@@ -23,7 +23,7 @@ const showGallery = ref(false)
         :class="{ active: activeIndex === i + 1 }"
         @click="activeIndex = i + 1; showGallery = true"
       >
-        <img :src="img.url" :alt="img.alt" loading="lazy" />
+        <img :src="img.url" :alt="img.alt" loading="lazy" @error="(e) => (e.target as HTMLImageElement).src = 'https://placehold.co/800x600?text=Image+Not+Found'" />
       </div>
       <button v-if="images.length > 6" class="thumb-more" @click="showGallery = true">
         +{{ images.length - 6 }}
@@ -35,7 +35,7 @@ const showGallery = ref(false)
       <div v-if="showGallery" class="lightbox" @click.self="showGallery = false">
         <button class="lb-close" @click="showGallery = false">&times;</button>
         <button class="lb-nav lb-prev" @click="activeIndex = (activeIndex - 1 + images.length) % images.length">‹</button>
-        <img class="lb-image" :src="images[activeIndex].url" :alt="images[activeIndex].alt" />
+        <img class="lb-image" :src="images[activeIndex].url" :alt="images[activeIndex].alt" @error="(e) => (e.target as HTMLImageElement).src = 'https://placehold.co/800x600?text=Image+Not+Found'" />
         <button class="lb-nav lb-next" @click="activeIndex = (activeIndex + 1) % images.length">›</button>
         <p class="lb-counter">{{ activeIndex + 1 }} / {{ images.length }}</p>
       </div>
