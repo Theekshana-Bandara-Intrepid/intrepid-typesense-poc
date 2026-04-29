@@ -59,15 +59,15 @@ useHead(() => ({
       </div>
       </div>
 
-      <ProductTripHighlights :highlights="trip.highlights" />
+      <ProductTripHighlights v-if="trip.highlights && trip.highlights.length > 0" :highlights="trip.highlights" />
 
       <ProductItineraryAccordion
+        v-if="trip.itinerary && trip.itinerary.length > 0"
         :days="trip.itinerary"
         :map-url="trip.mapUrl"
         :map-alt="trip.mapAlt"
       />
 
-      <ProductInclusionsList :inclusions="trip.inclusions" :exclusions="trip.exclusions" />
 
       <ProductDatesAndPrices :departures="trip.departures" currency="USD" />
     </template>

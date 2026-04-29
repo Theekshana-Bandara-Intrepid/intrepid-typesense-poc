@@ -151,10 +151,17 @@ export default defineEventHandler(async (event): Promise<TripDetail | null> => {
     styles: primaryDoc.styles || [],
     mapAlt: primaryDoc.map?.alt || `Map of ${primaryDoc.name || 'trip'}`,
     productImages: productImages.length ? productImages : [{ alt: primaryDoc.name || 'Trip image', url: imageUrl }],
-    highlights: primaryDoc.activities?.slice(0, 8) || [],
+    highlights: [],
     inclusions: [],
     exclusions: [],
-    itinerary: [],
+    itinerary: (primaryDoc.activities || []).map((act, i) => ({
+      day: i + 1,
+      title: act,
+      description: '',
+      accommodation: '',
+      meals: [],
+      activities: [],
+    })),
     departures,
   }
 
