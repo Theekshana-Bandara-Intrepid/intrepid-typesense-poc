@@ -34,6 +34,55 @@ export interface TripDocument {
 }
 
 /**
+ * DepartureDocument represents the structure of a single departure
+ * record inside the `dev_intrepid_departure` collection.
+ */
+export interface DepartureDocument {
+  objectID?: string
+  name?: string
+  departureId?: number
+  productCode?: string
+  productId?: number
+  productUrl?: string
+  primaryCountry?: string
+  destinations?: string[]
+  marketingRegions?: string[]
+  themes?: string[]
+  styles?: string[]
+  locations?: string[]
+  startCity?: string
+  endCity?: string
+  duration?: number
+  startDate?: number
+  endDate?: number
+  physicalRating?: number
+  placesLeft?: number
+  hasPlacesLeft?: boolean
+  closedForBooking?: boolean
+  reviewCount?: number
+  reviewRating?: number
+  lowestPrice?: Record<string, {
+    type?: string
+    price?: number
+    onSale?: boolean
+    currencyCode?: string
+    depositAmount?: number
+    discountPrice?: number
+    isHighlightedDeal?: boolean
+    isHighlightedPrice?: boolean
+  }>
+  map?: {
+    alt?: string
+    url?: string
+    title?: string
+    width?: number
+    height?: number
+  }
+  productImages?: Array<{ alt?: string; url?: string }>
+  activities?: string[]
+}
+
+/**
  * TripDetail represents the full product data required for the Product Detail Page (PDP).
  * This might be fetched either from a separate detailed Typesense collection or a CMS API,
  * but for this POC, we structure it to match the hardcoded data in `app/pages/trip/[slug].vue`.
@@ -44,6 +93,7 @@ export interface TripDetail extends TripDocument {
   endCity: string
   ageRange: string
   maxGroupSize: number
+  styles?: string[]
   mapAlt: string
   productImages: Array<{ alt: string; url: string }>
   highlights: string[]

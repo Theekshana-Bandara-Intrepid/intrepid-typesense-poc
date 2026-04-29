@@ -1,4 +1,5 @@
 import type { TripDetail } from '~/types/trip'
+import { createError } from 'h3'
 
 /**
  * useTrip Composable
@@ -17,25 +18,19 @@ export const useTrip = () => {
    * @returns A reactive reference to the trip details, along with loading/error states.
    */
   const fetchTripBySlug = async (slug: string) => {
-    // 1. Utilize useAsyncData to fetch from `/api/trip/${slug}`
-    /*
-    const { data: trip, pending, error } = await useAsyncData<TripDetail>(
-      `trip-${slug}`, 
+    const { data: trip, pending, error } = await useAsyncData<TripDetail | null>(
+      `trip-${slug}`,
       () => $fetch(`/api/trip/${slug}`)
     )
-    
-    // 2. Handle 404s if trip is null
+
     if (!trip.value) {
       throw createError({ statusCode: 404, statusMessage: 'Trip not found' })
     }
-    
-    return { trip, pending, error }
-    */
 
-    return { 
-      trip: ref<TripDetail | null>(null), 
-      pending: ref(false), 
-      error: ref(null) 
+    return {
+      trip,
+      pending,
+      error,
     }
   }
 

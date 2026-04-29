@@ -18,18 +18,29 @@ let typesenseClient: Client | null = null
  * @throws {Error} If required environment variables (e.g., TYPESENSE_API_KEY, TYPESENSE_HOST) are missing.
  */
 export function getTypesenseClient(): Client {
-  // TODO: Add implementation to check environment variables and instantiate Client
-  // Example expected variables:
-  // - TYPESENSE_HOST
-  // - TYPESENSE_PORT
-  // - TYPESENSE_PROTOCOL
-  // - TYPESENSE_API_KEY
+  const host = process.env.TYPESENSE_HOST || process.env.NUXT_PUBLIC_TYPESENSE_HOST
+  const protocol = process.env.TYPESENSE_PROTOCOL || process.env.NUXT_PUBLIC_TYPESENSE_PROTOCOL || 'https'
+  const portValue = process.env.TYPESENSE_PORT || process.env.NUXT_PUBLIC_TYPESENSE_PORT
+  const port = portValue ? parseInt(portValue, 10) : protocol === 'https' ? 443 : 8108
+  const apiKey = process.env.TYPESENSE_API_KEY || process.env.NUXT_PUBLIC_TYPESENSE_SEARCH_ONLY_KEY
 
-  if (!typesenseClient) {
-    // 1. Validate env vars
-    // 2. Initialize new Client({ nodes: [...], apiKey: '...' })
-    // 3. Assign to typesenseClient
+  if (!host || !apiKey) {
+    throw new Error('Missing Typesense configuration. Ensure TYPESENSE_HOST and TYPESENSE_API_KEY (or NUXT_PUBLIC_TYPESENSE_* equivalents) are set.')
   }
 
-  return typesenseClient!
+  if (!typesenseClient) {
+    typesenseClient = new Client({
+      nodes: [
+        {
+          host,
+          port,
+          protocol,
+        },
+      ],
+      apiKey,
+      connectionTimeoutSeconds: 10,
+    })
+  }
+
+  return typesenseClient
 }
