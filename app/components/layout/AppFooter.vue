@@ -26,7 +26,15 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <p>&copy; {{ new Date().getFullYear() }} Intrepid Travel. Typesense POC Demo.</p>
+            <p>&copy; {{ new Date().getFullYear() }} Intrepid Travel. Typesense POC Demo.</p>
+            <div class="footer-region">
+              <label for="region-select">Region / Currency</label>
+              <select id="region-select" v-model="selectedCode" @change="onRegionChange">
+                <option v-for="opt in regionOptions" :key="opt.code" :value="opt.code">
+                  {{ opt.label }}
+                </option>
+              </select>
+            </div>
       </div>
     </div>
   </footer>
@@ -83,4 +91,24 @@
 @media (max-width: 640px) {
   .footer-links { grid-template-columns: 1fr; }
 }
+.footer-region { margin-top: 12px; display: flex; align-items: center; gap: 8px }
+.footer-region label { color: var(--gray-400); font-size: 12px }
+.footer-region select { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--gray-700); background: var(--gray-800); color: var(--gray-200) }
 </style>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import useRegion from '~/composables/useRegion'
+
+const { region, setRegion, REGION_OPTIONS: regionOptions } = useRegion()
+const selectedCode = ref(region.value.code)
+
+const onRegionChange = (e: Event) => {
+  const val = (e.target as HTMLSelectElement).value
+  setRegion(val)
+  // notify the app to refetch data
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('region-changed'))
+  }
+}
+</script>

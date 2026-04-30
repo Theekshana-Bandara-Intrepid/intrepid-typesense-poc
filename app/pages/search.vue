@@ -4,6 +4,8 @@ useHead({ title: 'Search Results | Intrepid Travel' })
 import { provide } from 'vue'
 
 const search = useTypesenseSearch()
+import useRegion from '~/composables/useRegion'
+const { region } = useRegion()
 
 const {
   query,
@@ -52,6 +54,18 @@ watch(page, async () => {
 
 onMounted(async () => {
   await performSearch()
+})
+const onRegionChanged = async () => {
+  setPage(1)
+  await performSearch()
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') window.addEventListener('region-changed', onRegionChanged)
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') window.removeEventListener('region-changed', onRegionChanged)
 })
 </script>
 
@@ -110,7 +124,7 @@ onMounted(async () => {
             :themes="trip.themes"
             :slug="trip.slug"
             :lowest-price-date="trip.lowestPriceDate"
-            currency="USD"
+            :currency="trip.currency || region.value.code"
           />
         </div>
 

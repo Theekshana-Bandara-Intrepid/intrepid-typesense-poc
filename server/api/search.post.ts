@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody } from 'h3'
 import type { DepartureDocument, SearchResponse, TripDocument } from '~/types/trip'
 import { getTypesenseClient } from '~~/server/utils/typesense'
+import getTripCollectionSchema from '~~/server/utils/schema'
 
 export default defineEventHandler(async (event): Promise<SearchResponse> => {
   const body = await readBody<any>(event)
@@ -106,14 +107,49 @@ export default defineEventHandler(async (event): Promise<SearchResponse> => {
   // Typo tolerance: allow client to enable/disable; default to true
   ;(searchParams as any).typo_tolerance = typeof body.typoTolerance === 'boolean' ? body.typoTolerance : true
 
-  // Request facet counts for UI: destinations, styles, themes, physicalRating, regions, primaryCountry, tags
-  const facetFields = ['destinations', 'styles', 'themes', 'physicalRating', 'primaryCountry', 'regions', 'tags']
-  ;(searchParams as any).facet_by = facetFields.join(',')
-  ;(searchParams as any).max_facet_values = 200
+  // Request facet counts for UI: only include fields that are facetable in our local schema
+  try {
+    const desiredFacetFields = ['destinations', 'styles', 'themes', 'physicalRating', 'primaryCountry', 'regions', 'tags']
+    const localSchema = getTripCollectionSchema()
+    const localFacetable = new Set((localSchema.fields || []).filter((f: any) => f.facet).map((f: any) => f.name))
 
-  // Include grouping parameters if provided by the client
+    // Try to retrieve the remote collection schema to avoid requesting facets that don't exist remotely
+    let remoteFacetable = new Set<string>()
+    try {
+      const remoteSchema: any = await client.collections(collection).retrieve()
+      if (remoteSchema && Array.isArray(remoteSchema.fields)) {
+        remoteFacetable = new Set(remoteSchema.fields.filter((f: any) => f.facet).map((f: any) => f.name))
+      }
+    } catch (e) {
+      // ignore remote schema errors and fall back to local schema
+      console.warn('Could not fetch remote Typesense collection schema:', e?.message || e)
+    }
+
+    // Only include facet fields that are facetable both locally and remotely (if remote schema available)
+    const facetFields = desiredFacetFields.filter((f) => localFacetable.has(f) && (remoteFacetable.size ? remoteFacetable.has(f) : true))
+    if (facetFields.length) {
+      ;(searchParams as any).facet_by = facetFields.join(',')
+      ;(searchParams as any).max_facet_values = 200
+    }
+  } catch (err: any) {
+    console.warn('Could not compute facet fields from local schema:', err?.message || err)
+  }
+
+  // Include grouping parameters if provided by the client and if the field is facetable
   if (body.group_by) {
-    ;(searchParams as any).group_by = body.group_by
+    try {
+      const schema = getTripCollectionSchema()
+      const groupField = body.group_by
+      const fieldDef = (schema.fields || []).find((f: any) => f.name === groupField)
+      if (fieldDef && fieldDef.facet) {
+        ;(searchParams as any).group_by = groupField
+      } else {
+        console.warn(`Skipping group_by=${groupField} because it's not facetable in the local schema.`)
+      }
+    } catch (err: any) {
+      console.warn('Error checking schema for group_by:', err?.message || err)
+      ;(searchParams as any).group_by = body.group_by
+    }
   }
   if (typeof body.group_limit === 'number') {
     ;(searchParams as any).group_limit = body.group_limit
@@ -244,7 +280,8 @@ export default defineEventHandler(async (event): Promise<SearchResponse> => {
   }
 
   const mapDocToTrip = (doc: DepartureDocument): TripDocument => {
-    const usd = doc.lowestPrice?.usd || doc.lowestPrice?.USD
+    const currencyKey = (body.currency || 'usd').toString().toLowerCase()
+    const priceObj = (doc.lowestPrice && (doc.lowestPrice as any)[currencyKey]) || doc.lowestPrice?.usd || doc.lowestPrice?.USD || {}
     const slug = doc.productUrl?.split('/').filter(Boolean).pop() || doc.productCode || doc.name || 'trip'
     const mapUrl = normalizeAssetUrl(doc.map?.url)
     const imageUrl = normalizeAssetUrl(doc.productImages?.[0]?.url) || mapUrl
@@ -258,16 +295,17 @@ export default defineEventHandler(async (event): Promise<SearchResponse> => {
       style: doc.styles?.[0] || 'Original',
       themes: doc.themes || [],
       physicalRating: doc.physicalRating || 0,
-      price: usd?.price || 0,
-      originalPrice: usd?.price,
-      discountPrice: usd?.discountPrice,
-      onSale: usd?.onSale || false,
-      saleBadge: usd?.isHighlightedDeal ? 'Deal' : undefined,
+      price: priceObj?.price || 0,
+      originalPrice: priceObj?.price,
+      discountPrice: priceObj?.discountPrice,
+      onSale: priceObj?.onSale || false,
+      saleBadge: priceObj?.isHighlightedDeal ? 'Deal' : undefined,
       rating: doc.reviewRating || 0,
       reviewCount: doc.reviewCount || 0,
       lowestPriceDate: formatDate(doc.startDate),
       imageUrl,
       mapUrl: mapUrl || imageUrl,
+      currency: (body.currency || 'USD').toString().toUpperCase(),
     }
   }
 

@@ -1,4 +1,5 @@
 import type { SearchResponse, TripDocument } from '~/types/trip'
+import useRegion from '~/composables/useRegion'
 
 /**
  * useTypesenseSearch Composable
@@ -56,6 +57,9 @@ export const useTypesenseSearch = () => {
     isSearching.value = true
     
     try {
+      const { region } = useRegion()
+      const currency = region?.value?.code || 'USD'
+
       const response = await $fetch<SearchResponse>('/api/search', {
         method: 'POST',
         body: {
@@ -68,6 +72,7 @@ export const useTypesenseSearch = () => {
           geo: geo.value,
           filterLogic: filterLogic.value,
           typoTolerance: typoTolerance.value,
+          currency,
         },
       })
       
