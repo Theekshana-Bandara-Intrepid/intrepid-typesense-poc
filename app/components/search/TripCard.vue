@@ -24,12 +24,20 @@ const props = defineProps<{
 const wishlisted = ref(false)
 const compareAdded = ref(false)
 
+import useRegion from '~/composables/useRegion'
+const { region } = useRegion()
+
 function formatPrice(amount: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount)
+  const locale = (region && region.value && region.value.locale) || 'en-US'
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    }).format(amount)
+  } catch (e) {
+    return String(amount)
+  }
 }
 </script>
 
@@ -114,13 +122,13 @@ function formatPrice(amount: number, currency: string): string {
     <div class="card-footer">
       <div class="pricing-area">
         <div class="price-row">
-          <span class="price-from-label">From {{ currency || 'USD' }}</span>
+          <span class="price-from-label">From</span>
           <span class="price-current">
-            {{ formatPrice(onSale && discountPrice ? discountPrice : price, currency || 'USD').replace(/^[^\d]+/, '$') }}
+            {{ formatPrice(onSale && discountPrice ? discountPrice : price, currency || 'USD') }}
           </span>
         </div>
         <div v-if="onSale && originalPrice && discountPrice" class="sale-save-pill">
-          Save up to {{ currency || 'USD' }} {{ formatPrice(originalPrice - discountPrice, currency || 'USD').replace(/^[^\d]+/, '$') }}*
+          Save up to {{ formatPrice(originalPrice - discountPrice, currency || 'USD') }}*
         </div>
         <span v-if="lowestPriceDate" class="lowest-date">
           Lowest price {{ lowestPriceDate }}
