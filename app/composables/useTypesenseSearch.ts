@@ -48,23 +48,20 @@ export const useTypesenseSearch = () => {
     isSearching.value = true
     
     try {
-      // Execute the request to the server-side API
-      /*
       const response = await $fetch<SearchResponse>('/api/search', {
         method: 'POST',
         body: {
           q: query.value,
           page: page.value,
           filters,
-          sortBy: sortBy.value
-        }
+          sortBy: sortBy.value,
+        },
       })
       
       results.value = response.hits
       facets.value = response.facets
       totalHits.value = response.totalHits
       totalPages.value = response.totalPages
-      */
     } catch (error) {
       console.error('Typesense search failed:', error)
       // Handle error gracefully in UI
@@ -75,11 +72,20 @@ export const useTypesenseSearch = () => {
 
   // 5. Expose methods to update filters, clear filters, change page, etc.
   const setPage = (newPage: number) => {
-    // Implement
+    page.value = newPage
   }
   
   const clearFilters = () => {
-    // Implement
+    filters.destinations = []
+    filters.durationMin = undefined
+    filters.durationMax = undefined
+    filters.priceMin = undefined
+    filters.priceMax = undefined
+    filters.deals = []
+    filters.showNewTrips = false
+    filters.physicalRating = []
+    filters.styles = []
+    filters.themes = []
   }
 
   return {

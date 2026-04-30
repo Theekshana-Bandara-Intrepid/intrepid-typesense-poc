@@ -23,7 +23,7 @@ defineProps<{
       <!-- Route map on the left -->
       <div class="itinerary-map">
         <div class="map-card">
-          <img :src="mapUrl" :alt="mapAlt" class="map-image" loading="lazy" />
+          <img :src="mapUrl" :alt="mapAlt" class="map-image" loading="lazy" @error="(e) => (e.target as HTMLImageElement).src = 'https://placehold.co/800x600?text=Map+Not+Found'" />
         </div>
       </div>
 

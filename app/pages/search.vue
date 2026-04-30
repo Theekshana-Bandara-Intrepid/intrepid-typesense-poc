@@ -1,167 +1,39 @@
 <script setup lang="ts">
-useHead({ title: 'Search Results — Vietnam | Intrepid Travel' })
+useHead({ title: 'Search Results | Intrepid Travel' })
 
-const searchQuery = ref('Vietnam')
-const sortBy = ref('recommended')
-const currentPage = ref(1)
-const totalPages = ref(3)
+const {
+  query,
+  page,
+  sortBy,
+  results,
+  totalHits,
+  totalPages,
+  isSearching,
+  performSearch,
+  setPage,
+} = useTypesenseSearch()
 
-const totalTrips = 247
+const searchQuery = ref('')
 
-const trips = ref([
-  {
-    id: '1',
-    name: 'Best of Vietnam',
-    duration: 12,
-    destinations: ['Vietnam'],
-    style: 'Original',
-    slug: 'best-of-vietnam-166796',
-    mapUrl: 'https://placehold.co/400x300/e8f5e9/2e7d32?text=Vietnam+Route+Map',
-    imageUrl: 'https://placehold.co/400x300/2196F3/ffffff?text=Ha+Long+Bay',
-    price: 2195,
-    originalPrice: 2595,
-    discountPrice: 2195,
-    onSale: true,
-    saleBadge: 'Save 15%',
-    rating: 4.9,
-    reviewCount: 617,
-    physicalRating: 3,
-    themes: ['Explorer', 'Cultural'],
-    lowestPriceDate: 'Sep 14, 2026',
-  },
-  {
-    id: '2',
-    name: 'Premium Vietnam in Depth',
-    duration: 14,
-    destinations: ['Vietnam'],
-    style: 'Premium',
-    slug: 'premium-vietnam-in-depth',
-    mapUrl: 'https://placehold.co/400x300/e8f5e9/2e7d32?text=Vietnam+Route',
-    imageUrl: 'https://placehold.co/400x300/FF9800/ffffff?text=Hoi+An',
-    price: 5295,
-    rating: 4.8,
-    reviewCount: 234,
-    physicalRating: 2,
-    themes: ['Cultural', 'Food & Culinary'],
-    lowestPriceDate: 'Oct 3, 2026',
-  },
-  {
-    id: '3',
-    name: 'Cycle Vietnam',
-    duration: 13,
-    destinations: ['Vietnam'],
-    style: 'Original',
-    slug: 'cycle-vietnam',
-    mapUrl: 'https://placehold.co/400x300/e8f5e9/2e7d32?text=Cycle+Route',
-    imageUrl: 'https://placehold.co/400x300/4CAF50/ffffff?text=Cycling+Tour',
-    price: 2890,
-    rating: 4.7,
-    reviewCount: 89,
-    physicalRating: 4,
-    themes: ['Cycling', 'Explorer'],
-    lowestPriceDate: 'Aug 22, 2026',
-  },
-  {
-    id: '4',
-    name: 'Vietnam Real Food Adventure',
-    duration: 12,
-    destinations: ['Vietnam'],
-    style: 'Original',
-    slug: 'vietnam-real-food-adventure',
-    mapUrl: 'https://placehold.co/400x300/e8f5e9/2e7d32?text=Food+Route',
-    imageUrl: 'https://placehold.co/400x300/E91E63/ffffff?text=Food+Adventure',
-    price: 3150,
-    originalPrice: 3500,
-    discountPrice: 3150,
-    onSale: true,
-    saleBadge: 'Save 10%',
-    rating: 4.8,
-    reviewCount: 156,
-    physicalRating: 2,
-    themes: ['Food & Culinary', 'Cultural'],
-    lowestPriceDate: 'Nov 1, 2026',
-  },
-  {
-    id: '5',
-    name: 'Vietnam Family Holiday',
-    duration: 9,
-    destinations: ['Vietnam'],
-    style: 'Original',
-    slug: 'vietnam-family-holiday',
-    mapUrl: 'https://placehold.co/400x300/e8f5e9/2e7d32?text=Family+Route',
-    imageUrl: 'https://placehold.co/400x300/9C27B0/ffffff?text=Family+Holiday',
-    price: 2480,
-    rating: 4.6,
-    reviewCount: 73,
-    physicalRating: 2,
-    themes: ['Family', 'Explorer'],
-    lowestPriceDate: 'Jul 18, 2026',
-  },
-  {
-    id: '6',
-    name: 'Simply Vietnam',
-    duration: 8,
-    destinations: ['Vietnam'],
-    style: 'Basix',
-    slug: 'simply-vietnam',
-    mapUrl: 'https://placehold.co/400x300/e8f5e9/2e7d32?text=Simple+Route',
-    imageUrl: 'https://placehold.co/400x300/00BCD4/ffffff?text=Mekong+Delta',
-    price: 1535,
-    rating: 4.5,
-    reviewCount: 312,
-    physicalRating: 3,
-    themes: ['Explorer'],
-    lowestPriceDate: 'Jun 10, 2026',
-  },
-  {
-    id: '7',
-    name: 'Vietnam Explorer',
-    duration: 10,
-    destinations: ['Vietnam'],
-    style: 'Original',
-    slug: 'vietnam-explorer',
-    mapUrl: 'https://placehold.co/400x300/e8f5e9/2e7d32?text=Explorer+Route',
-    imageUrl: 'https://placehold.co/400x300/795548/ffffff?text=Sapa+Trek',
-    price: 2210,
-    rating: 4.7,
-    reviewCount: 198,
-    physicalRating: 3,
-    themes: ['Explorer', 'Trekking & Hiking'],
-    lowestPriceDate: 'Sep 28, 2026',
-  },
-  {
-    id: '8',
-    name: 'Vietnam Hike, Bike & Kayak',
-    duration: 10,
-    destinations: ['Vietnam'],
-    style: 'Original',
-    slug: 'vietnam-hike-bike-kayak',
-    mapUrl: 'https://placehold.co/400x300/e8f5e9/2e7d32?text=Active+Route',
-    imageUrl: 'https://placehold.co/400x300/FF5722/ffffff?text=Active+Adventure',
-    price: 2675,
-    rating: 4.8,
-    reviewCount: 64,
-    physicalRating: 4,
-    themes: ['Cycling', 'Trekking & Hiking'],
-    lowestPriceDate: 'Oct 14, 2026',
-  },
-  {
-    id: '9',
-    name: 'Comfort Vietnam',
-    duration: 11,
-    destinations: ['Vietnam'],
-    style: 'Comfort',
-    slug: 'comfort-vietnam',
-    mapUrl: 'https://placehold.co/400x300/e8f5e9/2e7d32?text=Comfort+Route',
-    imageUrl: 'https://placehold.co/400x300/3F51B5/ffffff?text=Luxury+Tour',
-    price: 3890,
-    rating: 4.9,
-    reviewCount: 147,
-    physicalRating: 2,
-    themes: ['Cultural', 'Explorer'],
-    lowestPriceDate: 'Dec 5, 2026',
-  },
-])
+const onSearch = async (value: string) => {
+  query.value = value
+  searchQuery.value = value
+  setPage(1)
+  await performSearch()
+}
+
+watch(sortBy, async () => {
+  setPage(1)
+  await performSearch()
+})
+
+watch(page, async () => {
+  await performSearch()
+})
+
+onMounted(async () => {
+  await performSearch()
+})
 </script>
 
 <template>
@@ -173,10 +45,10 @@ const trips = ref([
         <span class="bc-sep">></span>
         <span>Search</span>
       </div>
-      <h1 class="page-title">14 trips found for "{{ searchQuery }}"</h1>
+      <h1 class="page-title">{{ totalHits }} trips found for "{{ searchQuery || query }}"</h1>
       
       <div class="main-search-bar-wrap">
-        <SearchBar v-model="searchQuery" />
+        <SearchBar v-model="searchQuery" @search="onSearch" />
       </div>
     </div>
 
@@ -199,7 +71,7 @@ const trips = ref([
       <div class="results-area">
         <div class="trip-grid">
           <SearchTripCard
-            v-for="trip in trips"
+            v-for="trip in results"
             :key="trip.id"
             :id="trip.id"
             :name="trip.name"
@@ -223,8 +95,10 @@ const trips = ref([
           />
         </div>
 
+        <p v-if="!isSearching && results.length === 0" class="empty-state">No trips found.</p>
+
         <!-- Pagination -->
-        <SearchPaginationBar v-model:current-page="currentPage" :total-pages="totalPages" />
+        <SearchPaginationBar v-model:current-page="page" :total-pages="totalPages" />
       </div>
     </div>
   </div>
@@ -235,6 +109,11 @@ const trips = ref([
   max-width: var(--container-max);
   margin: 0 auto;
   padding: 0 var(--container-padding);
+}
+.empty-state {
+  padding: var(--space-6) 0;
+  color: var(--gray-600);
+  text-align: center;
 }
 
 /* ── Header Area ───────────────────────────────────────────── */

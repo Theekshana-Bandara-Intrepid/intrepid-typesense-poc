@@ -38,7 +38,7 @@ function formatPrice(amount: number, currency: string): string {
     <!-- ── Image Area ──────────────────────────────────────── -->
     <div class="card-image">
       <NuxtLink :to="`/trip/${slug}`" class="card-overlay-link" :aria-label="`View ${name} details`"></NuxtLink>
-      <img :src="mapUrl" :alt="`Route map for ${name}`" class="map-img" loading="lazy" />
+      <img :src="mapUrl" :alt="`Route map for ${name}`" class="map-img" loading="lazy" @error="(e) => (e.target as HTMLImageElement).src = 'https://placehold.co/800x600?text=Image+Not+Found'" />
 
       <!-- Sale badge / Promos -->
       <div v-if="onSale && saleBadge" class="sale-badge">
