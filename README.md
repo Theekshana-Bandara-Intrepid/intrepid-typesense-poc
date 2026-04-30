@@ -1,75 +1,21 @@
-# Nuxt Minimal Starter
+# Typesense Search Migration POC
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Short proof-of-concept to re-create a subset of the Intrepid Travel website search using Typesense instead of Algolia. The goal is to verify Typesense supports our requirements (facets, geo-search, typo tolerance, synonyms, pinned results) and to measure response speed.
 
-## Setup
+Key goals
+- Evaluate core search features: facets, geo-search, typo tolerance, synonyms, and merchandising (pinned results).
+- Measure query latency for common user flows (autocomplete, filtered search, geo queries).
+- Verify query logic support (AND / OR conditions) and result relevance.
 
-Make sure to install dependencies:
+What to test
+- Implement Instant Search with Autocomplete (real-time results and suggestions).
+- Implement Faceted Filtering and Sorting (destination, theme, duration, price, date; sort options: Relevance, Price low→high, Price high→low, Duration short→long).
+- Configure Typo Tolerance and Synonyms (e.g. "beach" ↔ "coastal").
+- Implement Geo-Search using `_geoloc` (location-based results near a given GPS coordinate).
+- Implement Merchandising Rules (pinned/featured results at top).
+- Implement Query Conditions (AND / OR logic for filters and terms).
 
-```bash
-# npm
-npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
-```
-
-## Production
-
-Build the application for production:
-
-```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+Repository pointers
+- API autocomplete endpoint: [server/api/autocomplete.get.ts](server/api/autocomplete.get.ts)
+- API search endpoint: [server/api/search.post.ts](server/api/search.post.ts)
+- Typesense client + helpers: [utils/typesense.ts](utils/typesense.ts)
