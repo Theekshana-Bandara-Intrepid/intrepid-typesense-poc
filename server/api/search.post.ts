@@ -113,14 +113,46 @@ export default defineEventHandler(async (event): Promise<SearchResponse> => {
     const localSchema = getTripCollectionSchema()
     const localFacetable = new Set((localSchema.fields || []).filter((f: any) => f.facet).map((f: any) => f.name))
 
-    // Try to retrieve the remote collection schema to avoid requesting facets that don't exist remotely
+    // Try to retrieve the remote collection schema to avoid requesting facets that don't exist remotely.
+    // Use an explicit REST call and include an admin API key if available. If no admin key is present,
+    // skip the remote fetch and fall back to the local schema to avoid 401 errors when only a search-only key exists.
     let remoteFacetable = new Set<string>()
     try {
-      const remoteSchema: any = await client.collections(collection).retrieve()
-      if (remoteSchema && Array.isArray(remoteSchema.fields)) {
-        remoteFacetable = new Set(remoteSchema.fields.filter((f: any) => f.facet).map((f: any) => f.name))
+      const host = process.env.TYPESENSE_HOST || process.env.NUXT_PUBLIC_TYPESENSE_HOST
+      const protocol = process.env.TYPESENSE_PROTOCOL || process.env.NUXT_PUBLIC_TYPESENSE_PROTOCOL || 'https'
+      const port = process.env.TYPESENSE_PORT ? `:${process.env.TYPESENSE_PORT}` : ''
+      // Prefer admin key names; fall back to public/search keys if an admin key is not present.
+      const adminApiKey = process.env.TYPESENSE_API_KEY || process.env.TYPESENSE_ADMIN_API_KEY || process.env.NUXT_PUBLIC_TYPESENSE_API_KEY || process.env.NUXT_PUBLIC_TYPESENSE_SEARCH_ONLY_KEY
+
+      if (!host) {
+        throw new Error('Missing Typesense host in environment; cannot fetch remote schema')
       }
-    } catch (e) {
+
+      if (!adminApiKey) {
+        // No admin key available; avoid calling remote API which would return 401. Use local schema.
+        // Log at debug level and skip remote fetch.
+        console.debug('No Typesense admin API key set; skipping remote schema fetch and using local schema only.')
+      } else {
+        const url = `${protocol}://${host}${port}/api/collections/${collection}`
+        const resp = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-TYPESENSE-API-KEY': adminApiKey,
+          },
+        })
+
+        if (!resp.ok) {
+          const text = await resp.text()
+          throw new Error(`Request failed with HTTP code ${resp.status} | Server said: ${text}`)
+        }
+
+        const remoteSchema: any = await resp.json()
+        if (remoteSchema && Array.isArray(remoteSchema.fields)) {
+          remoteFacetable = new Set(remoteSchema.fields.filter((f: any) => f.facet).map((f: any) => f.name))
+        }
+      }
+    } catch (e: any) {
       // ignore remote schema errors and fall back to local schema
       console.warn('Could not fetch remote Typesense collection schema:', e?.message || e)
     }
@@ -197,6 +229,37 @@ export default defineEventHandler(async (event): Promise<SearchResponse> => {
       const counts = fc.counts || fc.values || []
       facetsResult[fieldName] = counts.map((c: any) => ({ value: String(c.value), count: c.count }))
     }
+  }
+
+  // If Typesense did not return facet counts for some desired fields, compute counts
+  // from the (unpaginated) hitsDocs we retrieved earlier. This ensures the UI can show
+  // dynamic counts even when the remote collection does not expose facet counts.
+  try {
+    const desiredFacetFields = ['destinations', 'styles', 'themes', 'physicalRating', 'primaryCountry', 'regions', 'tags']
+    for (const field of desiredFacetFields) {
+      if (!Array.isArray(facetsResult[field]) || facetsResult[field].length === 0) {
+        const countsMap = new Map<string, number>()
+        for (const doc of hitsDocs) {
+          const val = (doc as any)[field]
+          if (val === undefined || val === null) continue
+          if (Array.isArray(val)) {
+            for (const v of val) {
+              const key = String(v)
+              countsMap.set(key, (countsMap.get(key) || 0) + 1)
+            }
+          } else {
+            const key = String(val)
+            countsMap.set(key, (countsMap.get(key) || 0) + 1)
+          }
+        }
+        const arr = Array.from(countsMap.entries()).map(([value, count]) => ({ value, count }))
+        // sort descending by count
+        arr.sort((a, b) => b.count - a.count)
+        facetsResult[field] = arr
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to compute fallback facet counts:', e?.message || e)
   }
 
   // If Typesense returned grouped_hits (when using group_by), extract the

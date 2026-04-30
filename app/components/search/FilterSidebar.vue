@@ -101,6 +101,14 @@ const styles = reactive([
   { label: 'Premium' },
 ])
 
+// Map UI labels to stored values in the index
+const facetValueMap: Record<string, Record<string, string>> = {
+  styles: {
+    // UI label : stored value
+    Basix: 'Basic',
+  },
+}
+
 /* ── Themes ────────────────────────────────────────────────── */
 const themes = reactive([
   { label: 'Explorer' },
@@ -147,9 +155,33 @@ function clearAll() {
 }
 
 function getFacetCount(field: string, value: string | number) {
+  const normalized = (facetValueMap[field] && typeof value === 'string' && facetValueMap[field][value]) || value
   const arr = (facets?.value?.[field] || []) as Array<{ value: string; count: number }>
-  const found = arr.find((x: any) => String(x.value) === String(value))
-  return found ? found.count : 0
+  const found = arr.find((x: any) => String(x.value) === String(normalized))
+  if (found) return found.count
+
+  // Fallback: compute counts from current search results when Typesense did not return facet counts.
+  // `search.results` is a ref in the injected `search` composable.
+  try {
+    const resultsRef = (search && (search.results as any))
+    const results = resultsRef && (resultsRef.value || resultsRef) ? (resultsRef.value || resultsRef) : []
+    let cnt = 0
+    for (const doc of results) {
+      const fieldVal = (doc as any)[field]
+      if (fieldVal === undefined || fieldVal === null) continue
+      if (Array.isArray(fieldVal)) {
+        // array of strings or numbers
+        const match = fieldVal.some((v) => String(v) === String(normalized))
+        if (match) cnt++
+      } else {
+        // single value
+        if (String(fieldVal) === String(normalized)) cnt++
+      }
+    }
+    return cnt
+  } catch (e) {
+    return 0
+  }
 }
 
 function toggleDestination(label: string) {
@@ -162,8 +194,9 @@ function toggleDestination(label: string) {
 
 function toggleStyle(label: string) {
   filters.styles = filters.styles || []
-  const i = filters.styles.indexOf(label)
-  if (i === -1) filters.styles.push(label)
+  const storedValue = (facetValueMap.styles && facetValueMap.styles[label]) || label
+  const i = filters.styles.indexOf(storedValue)
+  if (i === -1) filters.styles.push(storedValue)
   else filters.styles.splice(i, 1)
   performSearch()
 }
@@ -242,7 +275,7 @@ function toggleShowNewTrips() {
             size="16"
           />
           <span class="region-name">{{ region.region }}</span>
-          <span class="region-count">({{ region.countries.reduce((a, c) => a + getFacetCount('destinations', c.label), 0) }})</span>
+          <span class="region-count">({{ region.countries.reduce((a, c) => a + getFacetCount('primaryCountry', c.label), 0) }})</span>
         </button>
         <Transition name="collapse">
           <div v-show="region.expanded" class="region-countries">
@@ -258,7 +291,7 @@ function toggleShowNewTrips() {
                 class="cb"
               />
               <span class="cb-label">{{ country.label }}</span>
-              <span class="cb-count">{{ getFacetCount('destinations', country.label) }}</span>
+              <span class="cb-count">{{ getFacetCount('primaryCountry', country.label) }}</span>
             </label>
           </div>
         </Transition>
@@ -395,20 +428,20 @@ function toggleShowNewTrips() {
 
     <!-- ── Travel Style ──────────────────────────────────────── -->
     <SearchFilterGroup name="Travel Style">
-      <label
-        v-for="s in styles"
-        :key="s.label"
-        class="checkbox-item"
-      >
-        <input
-          type="checkbox"
-          :checked="(filters.styles || []).includes(s.label)"
-          @change="() => toggleStyle(s.label)"
-          class="cb"
-        />
-        <span class="cb-label">{{ s.label }}</span>
-        <span class="cb-count">{{ getFacetCount('styles', s.label) }}</span>
-      </label>
+          <label
+            v-for="s in styles"
+            :key="s.label"
+            class="checkbox-item"
+          >
+            <input
+              type="checkbox"
+              :checked="(filters.styles || []).includes((facetValueMap.styles && facetValueMap.styles[s.label]) || s.label)"
+              @change="() => toggleStyle(s.label)"
+              class="cb"
+            />
+            <span class="cb-label">{{ s.label }}</span>
+            <span class="cb-count">{{ getFacetCount('styles', s.label) }}</span>
+          </label>
     </SearchFilterGroup>
 
     <!-- ── Themes ────────────────────────────────────────────── -->
