@@ -1,41 +1,54 @@
 import { defineEventHandler, getQuery } from 'h3'
-// import { getTypesenseClient } from '~/server/utils/typesense'
-
-/**
- * Autocomplete / Query Suggestions API Route (/api/autocomplete)
- * 
- * This GET endpoint receives partial user queries as they type in the search bar.
- * It uses Typesense's fast prefix search capabilities to return immediate suggestions.
- * To replicate Algolia's Query Suggestions, this might search across a dedicated
- * `query_suggestions` collection, or it might perform a faceted prefix search on the 
- * `destinations` field of the `trips` collection.
- */
+import { getTypesenseClient } from '~~/server/utils/typesense'
 
 interface AutocompleteQuery {
-  q: string
+  q?: string
 }
 
 export default defineEventHandler(async (event) => {
-  // 1. Extract query parameter `q`
-  const query = getQuery<AutocompleteQuery>(event)
+  const { q } = getQuery<AutocompleteQuery>(event) || {}
 
-  // 2. Initialize Typesense client
-  // const client = getTypesenseClient()
+  if (!q || String(q).trim().length === 0) {
+    return { suggestions: [] }
+  }
 
-  // 3. Execute prefix search
-  /*
-    const response = await client.collections('trips').documents().search({
-      q: query.q,
-      query_by: 'destinations,name',
-      prefix: true, // Enable prefix matching for "type-as-you-go"
-      per_page: 5   // Only return top 5 suggestions
-    })
-  */
+  try {
+    const client = getTypesenseClient()
+    const collection = process.env.TYPESENSE_COLLECTION || 'dev_intrepid_departure'
 
-  // 4. Format and return lightweight suggestions array
-  // Ex: ['Vietnam', 'Vietnam & Cambodia', 'Best of Vietnam']
-  
-  return {
-    suggestions: []
+    const params = {
+      q: String(q),
+      query_by: 'name,destinations',
+      prefix: true,
+      per_page: 8,
+    }
+
+    const response: any = await client.collections(collection).documents().search(params)
+
+    const suggestionsSet = new Set<string>()
+
+    const hits = response.hits || []
+    for (const hit of hits) {
+      const doc = hit.document || {}
+      if (doc.name && typeof doc.name === 'string') {
+        suggestionsSet.add(doc.name)
+      }
+      if (Array.isArray(doc.destinations)) {
+        for (const dest of doc.destinations) {
+          if (typeof dest === 'string') {
+            // only include destinations that match the user's typed text
+            if (dest.toLowerCase().includes(String(q).toLowerCase())) {
+              suggestionsSet.add(dest)
+            }
+          }
+        }
+      }
+      if (suggestionsSet.size >= 8) break
+    }
+
+    return { suggestions: Array.from(suggestionsSet).slice(0, 8) }
+  } catch (error) {
+    console.error('Autocomplete error:', error)
+    return { suggestions: [] }
   }
 })
