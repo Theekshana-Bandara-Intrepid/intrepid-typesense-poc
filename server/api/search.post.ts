@@ -4,6 +4,11 @@ import { getTypesenseClient } from '~~/server/utils/typesense'
 
 export default defineEventHandler(async (event): Promise<SearchResponse> => {
   const body = await readBody<any>(event)
+  // Pagination and defaults
+  const page = body.page || 1
+  const perPage = 12
+
+  // Initialize Typesense client
   let client
   try {
     client = getTypesenseClient()
@@ -19,8 +24,6 @@ export default defineEventHandler(async (event): Promise<SearchResponse> => {
     }
   }
   const collection = process.env.TYPESENSE_COLLECTION || 'dev_intrepid_departure'
-  const perPage = 12
-  const page = body.page || 1
 
   const filters: string[] = []
   const quote = (value: string) => `"${value.replace(/"/g, '\\"')}"`
@@ -57,27 +60,51 @@ export default defineEventHandler(async (event): Promise<SearchResponse> => {
     filters.push(`onSale:=true`)
   }
 
-  const filterString = filters.length ? filters.join(' && ') : undefined
+  // Date filters: expect YYYY-MM-DD strings from the frontend; convert to epoch seconds
+  if (body.filters?.startDate) {
+    const sd = Date.parse(body.filters.startDate)
+    if (!isNaN(sd)) {
+      const startTs = Math.floor(sd / 1000)
+      filters.push(`startDate:>=${startTs}`)
+    }
+  }
+  if (body.filters?.endDate) {
+    const ed = Date.parse(body.filters.endDate)
+    if (!isNaN(ed)) {
+      const endDateObj = new Date(ed)
+      endDateObj.setHours(23, 59, 59, 999)
+      const endTs = Math.floor(endDateObj.getTime() / 1000)
+      filters.push(`startDate:<=${endTs}`)
+    }
+  }
+
+  // Support AND / OR filter logic (default AND)
+  const filterLogic = (body.filterLogic || 'AND').toString().toUpperCase()
+  const filterOp = filterLogic === 'OR' ? ' || ' : ' && '
+  const filterString = filters.length ? filters.join(filterOp) : undefined
 
   const sortByMap: Record<string, string | undefined> = {
-    recommended: 'reviewRating:desc',
+    relevance: undefined,
     'price-asc': 'lowestPrice.usd.price:asc',
     'price-desc': 'lowestPrice.usd.price:desc',
     'duration-asc': 'duration:asc',
-    'duration-desc': 'duration:desc',
-    'rating-desc': 'reviewRating:desc',
-    newest: 'startDate:desc',
   }
 
-  const sortString = sortByMap[body.sortBy]
+  const sortString = sortByMap[body.sortBy || 'relevance']
 
-  const searchParams = {
+  const searchParams: Record<string, any> = {
     q: body.q?.trim() || '*',
     query_by: 'name,primaryCountry,destinations,marketingRegions,themes,styles,locations,productUrl',
     filter_by: filterString,
-    sort_by: sortString,
     per_page: 250,
   }
+
+  if (sortString) {
+    searchParams.sort_by = sortString
+  }
+
+  // Typo tolerance: allow client to enable/disable; default to true
+  ;(searchParams as any).typo_tolerance = typeof body.typoTolerance === 'boolean' ? body.typoTolerance : true
 
   // Request facet counts for UI: destinations, styles, themes, physicalRating, regions, primaryCountry, tags
   const facetFields = ['destinations', 'styles', 'themes', 'physicalRating', 'primaryCountry', 'regions', 'tags']
@@ -91,6 +118,9 @@ export default defineEventHandler(async (event): Promise<SearchResponse> => {
   if (typeof body.group_limit === 'number') {
     ;(searchParams as any).group_limit = body.group_limit
   }
+
+  // Geo search: if provided, we'll post-filter results by distance (km)
+  const geoQuery = body.geo // { lat: number, lng: number, radiusKm?: number }
 
   const executeSearch = async () => {
     // Try with full params first. If Typesense rejects facet_by/group_by
@@ -144,6 +174,36 @@ export default defineEventHandler(async (event): Promise<SearchResponse> => {
     hitsDocs = (searchResults.hits || []).map((hit: { document: DepartureDocument }) => hit.document)
   }
 
+  // Geo filtering (post-filter): if client provided geo query, keep docs that
+  // have at least one _geoloc point within the requested radius (km).
+  const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const toRad = (v: number) => (v * Math.PI) / 180
+    const R = 6371 // Earth radius in km
+    const dLat = toRad(lat2 - lat1)
+    const dLon = toRad(lon2 - lon1)
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+  }
+
+  if (geoQuery && typeof geoQuery.lat === 'number' && typeof geoQuery.lng === 'number') {
+    const radiusKm = typeof geoQuery.radiusKm === 'number' ? geoQuery.radiusKm : 50
+    hitsDocs = hitsDocs.filter((doc) => {
+      const geo = (doc as any)._geoloc || (doc as any).geo || []
+      if (!Array.isArray(geo) || geo.length === 0) return false
+      for (const loc of geo) {
+        const lat = loc.lat ?? loc.latitude ?? loc[0]
+        const lng = loc.lng ?? loc.longitude ?? loc[1]
+        if (typeof lat === 'number' && typeof lng === 'number') {
+          if (haversineKm(lat, lng, geoQuery.lat, geoQuery.lng) <= radiusKm) return true
+        }
+      }
+      return false
+    })
+  }
+
   // Deduplicate by productId/productCode/name as a safeguard (for non-grouped responses)
   const groupedProducts = new Map<string, DepartureDocument>()
   for (const doc of hitsDocs) {
@@ -153,7 +213,18 @@ export default defineEventHandler(async (event): Promise<SearchResponse> => {
     }
   }
 
-  const allGroupedDocs = Array.from(groupedProducts.values())
+  let allGroupedDocs = Array.from(groupedProducts.values())
+
+  // Merchandising / pinned results: allow pinned product IDs from env var
+  const pinnedCsv = process.env.TYPESENSE_PINNED_PRODUCT_IDS || process.env.PINNED_PRODUCT_IDS || ''
+  const pinnedIds = pinnedCsv.split(',').map((s) => s.trim()).filter(Boolean)
+  if (pinnedIds.length) {
+    const pinnedSet = new Set(pinnedIds.map(String))
+    const pinnedDocs = allGroupedDocs.filter((d) => pinnedSet.has(String(d.productId)))
+    const otherDocs = allGroupedDocs.filter((d) => !pinnedSet.has(String(d.productId)))
+    allGroupedDocs = [...pinnedDocs, ...otherDocs]
+  }
+
   const totalHits = allGroupedDocs.length
   const totalPages = Math.max(1, Math.ceil(totalHits / perPage))
   

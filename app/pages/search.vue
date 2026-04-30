@@ -23,9 +23,20 @@ provide('search', search)
 
 const searchQuery = ref('')
 
-const onSearch = async (value: string) => {
-  query.value = value
-  searchQuery.value = value
+type SearchPayload = string | { query?: string; startDate?: string; endDate?: string }
+
+const onSearch = async (value: SearchPayload) => {
+  if (typeof value === 'string') {
+    query.value = value
+    searchQuery.value = value
+    filters.startDate = undefined
+    filters.endDate = undefined
+  } else {
+    query.value = value.query || ''
+    searchQuery.value = value.query || ''
+    filters.startDate = value.startDate || undefined
+    filters.endDate = value.endDate || undefined
+  }
   setPage(1)
   await performSearch()
 }

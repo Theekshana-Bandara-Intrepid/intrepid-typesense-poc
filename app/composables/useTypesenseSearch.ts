@@ -16,10 +16,13 @@ export const useTypesenseSearch = () => {
   
   // 2. Define reactive state for pagination and sorting
   const page = ref(1)
-  const sortBy = ref('recommended') // e.g., 'price-asc', 'duration-desc'
+  const sortBy = ref('relevance') // 'relevance' means Typesense relevance (no sort_by)
   // 2.b Grouping (return one document per product)
   const groupBy = ref<string | null>('productId')
   const groupLimit = ref<number>(1)
+  const geo = ref<{ lat?: number; lng?: number; radiusKm?: number }>({})
+  const filterLogic = ref<'AND' | 'OR'>('AND')
+  const typoTolerance = ref<boolean | undefined>(undefined)
 
   // 3. Define reactive state for active filters
   const filters = reactive({
@@ -28,6 +31,8 @@ export const useTypesenseSearch = () => {
     durationMax: undefined as number | undefined,
     priceMin: undefined as number | undefined,
     priceMax: undefined as number | undefined,
+    startDate: undefined as string | undefined,
+    endDate: undefined as string | undefined,
     deals: [] as string[],
     showNewTrips: false,
     physicalRating: [] as number[],
@@ -60,6 +65,9 @@ export const useTypesenseSearch = () => {
           sortBy: sortBy.value,
           group_by: groupBy.value || undefined,
           group_limit: groupLimit.value || undefined,
+          geo: geo.value,
+          filterLogic: filterLogic.value,
+          typoTolerance: typoTolerance.value,
         },
       })
       

@@ -6,7 +6,7 @@ const endDate = ref('')
 const today = new Date().toISOString().split('T')[0]
 
 const emit = defineEmits<{
-  search: [query: string]
+  search: [string | { query: string; startDate?: string; endDate?: string }]
 }>()
 
 const { suggestions, isLoading } = useAutocomplete(query)
@@ -17,14 +17,14 @@ watch([query, suggestions], () => {
 })
 
 function onSubmit() {
-  emit('search', query.value)
+  emit('search', { query: query.value, startDate: startDate.value || undefined, endDate: endDate.value || undefined })
   showSuggestions.value = false
 }
 
 function selectSuggestion(s: string) {
   query.value = s
   showSuggestions.value = false
-  emit('search', s)
+  emit('search', { query: s, startDate: startDate.value || undefined, endDate: endDate.value || undefined })
 }
 </script>
 
