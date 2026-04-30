@@ -1,6 +1,10 @@
 <script setup lang="ts">
 useHead({ title: 'Search Results | Intrepid Travel' })
 
+import { provide } from 'vue'
+
+const search = useTypesenseSearch()
+
 const {
   query,
   page,
@@ -11,7 +15,11 @@ const {
   isSearching,
   performSearch,
   setPage,
-} = useTypesenseSearch()
+  filters,
+  facets,
+} = search
+
+provide('search', search)
 
 const searchQuery = ref('')
 

@@ -1,131 +1,212 @@
 <script setup lang="ts">
 /* ── Destinations (nested) ─────────────────────────────────── */
+import { inject, computed, reactive, ref } from 'vue'
+
+const search = inject('search') as any
+if (!search) {
+  throw new Error('FilterSidebar must be used within the search page (provide "search").')
+}
+
+const filters = search.filters
+const facets = search.facets
+const performSearch = search.performSearch
+
 const destinations = reactive([
   {
     region: 'Asia',
     expanded: true,
     countries: [
-      { label: 'Armenia', count: 4, checked: false },
-      { label: 'Bhutan', count: 6, checked: false },
-      { label: 'Cambodia', count: 12, checked: false },
-      { label: 'China', count: 8, checked: false },
-      { label: 'India', count: 22, checked: false },
-      { label: 'Japan', count: 15, checked: false },
-      { label: 'Laos', count: 7, checked: false },
-      { label: 'Mongolia', count: 3, checked: false },
-      { label: 'Myanmar', count: 5, checked: false },
-      { label: 'Nepal', count: 11, checked: false },
-      { label: 'Sri Lanka', count: 14, checked: false },
-      { label: 'Thailand', count: 18, checked: false },
-      { label: 'Vietnam', count: 21, checked: true },
+      { label: 'Armenia' },
+      { label: 'Bhutan' },
+      { label: 'Cambodia' },
+      { label: 'China' },
+      { label: 'India' },
+      { label: 'Japan' },
+      { label: 'Laos' },
+      { label: 'Mongolia' },
+      { label: 'Myanmar' },
+      { label: 'Nepal' },
+      { label: 'Sri Lanka' },
+      { label: 'Thailand' },
+      { label: 'Vietnam' },
     ],
   },
   {
     region: 'Africa',
     expanded: false,
     countries: [
-      { label: 'Egypt', count: 9, checked: false },
-      { label: 'Kenya', count: 7, checked: false },
-      { label: 'Morocco', count: 14, checked: false },
-      { label: 'South Africa', count: 11, checked: false },
-      { label: 'Tanzania', count: 8, checked: false },
+      { label: 'Egypt' },
+      { label: 'Kenya' },
+      { label: 'Morocco' },
+      { label: 'South Africa' },
+      { label: 'Tanzania' },
     ],
   },
   {
     region: 'Europe',
     expanded: false,
     countries: [
-      { label: 'Croatia', count: 5, checked: false },
-      { label: 'Greece', count: 7, checked: false },
-      { label: 'Italy', count: 12, checked: false },
-      { label: 'Spain', count: 9, checked: false },
-      { label: 'Turkey', count: 10, checked: false },
+      { label: 'Croatia' },
+      { label: 'Greece' },
+      { label: 'Italy' },
+      { label: 'Spain' },
+      { label: 'Turkey' },
     ],
   },
   {
     region: 'Central & South America',
     expanded: false,
     countries: [
-      { label: 'Argentina', count: 6, checked: false },
-      { label: 'Colombia', count: 4, checked: false },
-      { label: 'Costa Rica', count: 8, checked: false },
-      { label: 'Ecuador', count: 5, checked: false },
-      { label: 'Peru', count: 13, checked: false },
+      { label: 'Argentina' },
+      { label: 'Colombia' },
+      { label: 'Costa Rica' },
+      { label: 'Ecuador' },
+      { label: 'Peru' },
     ],
   },
 ])
 
 /* ── Duration range ────────────────────────────────────────── */
-const durationMin = ref(1)
-const durationMax = ref(30)
+// Use central filters if available
+const durationMin = ref(filters.durationMin ?? 1)
+const durationMax = ref(filters.durationMax ?? 30)
 
 /* ── Price range ───────────────────────────────────────────── */
-const priceMin = ref(0)
-const priceMax = ref(10000)
+const priceMin = ref(filters.priceMin ?? 0)
+const priceMax = ref(filters.priceMax ?? 10000)
 
 /* ── Deals & New Trips ─────────────────────────────────────── */
 const deals = reactive([
-  { label: 'Last minute deals', count: 8, checked: false },
-  { label: 'Early bird savings', count: 12, checked: false },
-  { label: 'Flash sale', count: 3, checked: false },
-  { label: 'Free trip upgrades', count: 5, checked: false },
+  { label: 'Last minute deals' },
+  { label: 'Early bird savings' },
+  { label: 'Flash sale' },
+  { label: 'Free trip upgrades' },
 ])
-const showNewTrips = ref(false)
+const showNewTrips = ref(filters.showNewTrips ?? false)
 
 /* ── Physical rating ───────────────────────────────────────── */
 const physicalRatings = reactive([
-  { label: '1 – Easy going', value: 1, count: 24, checked: false },
-  { label: '2 – Average', value: 2, count: 89, checked: false },
-  { label: '3 – Moderate', value: 3, count: 112, checked: false },
-  { label: '4 – Demanding', value: 4, count: 46, checked: false },
-  { label: '5 – Challenging', value: 5, count: 11, checked: false },
+  { label: '1 – Easy going', value: 1 },
+  { label: '2 – Average', value: 2 },
+  { label: '3 – Moderate', value: 3 },
+  { label: '4 – Demanding', value: 4 },
+  { label: '5 – Challenging', value: 5 },
 ])
 
 /* ── Travel Style ──────────────────────────────────────────── */
 const styles = reactive([
-  { label: 'Basix', count: 18, checked: false },
-  { label: 'Original', count: 97, checked: false },
-  { label: 'Comfort', count: 34, checked: false },
-  { label: 'Premium', count: 12, checked: false },
+  { label: 'Basix' },
+  { label: 'Original' },
+  { label: 'Comfort' },
+  { label: 'Premium' },
 ])
 
 /* ── Themes ────────────────────────────────────────────────── */
 const themes = reactive([
-  { label: 'Explorer', count: 64, checked: false },
-  { label: 'Wildlife & Nature', count: 31, checked: false },
-  { label: 'Food & Culinary', count: 22, checked: false },
-  { label: 'Trekking & Hiking', count: 28, checked: false },
-  { label: 'Cycling', count: 14, checked: false },
-  { label: 'Sailing', count: 9, checked: false },
-  { label: 'Family', count: 16, checked: false },
-  { label: 'Festival & Events', count: 7, checked: false },
-  { label: 'Cultural', count: 42, checked: false },
-  { label: 'Photography', count: 5, checked: false },
+  { label: 'Explorer' },
+  { label: 'Wildlife & Nature' },
+  { label: 'Food & Culinary' },
+  { label: 'Trekking & Hiking' },
+  { label: 'Cycling' },
+  { label: 'Sailing' },
+  { label: 'Family' },
+  { label: 'Festival & Events' },
+  { label: 'Cultural' },
+  { label: 'Photography' },
 ])
 
 /* ── Active filters ────────────────────────────────────────── */
 const activeFilterCount = computed(() => {
   let count = 0
-  destinations.forEach(r => r.countries.forEach(c => { if (c.checked) count++ }))
-  deals.forEach(d => { if (d.checked) count++ })
-  physicalRatings.forEach(p => { if (p.checked) count++ })
-  styles.forEach(s => { if (s.checked) count++ })
-  themes.forEach(t => { if (t.checked) count++ })
-  if (showNewTrips.value) count++
+  if (Array.isArray(filters.destinations)) count += filters.destinations.length
+  if (Array.isArray(filters.styles)) count += filters.styles.length
+  if (Array.isArray(filters.themes)) count += filters.themes.length
+  if (Array.isArray(filters.physicalRating)) count += filters.physicalRating.length
+  if (filters.showNewTrips) count++
+  if (typeof filters.durationMin === 'number' || typeof filters.durationMax === 'number') count++
+  if (typeof filters.priceMin === 'number' || typeof filters.priceMax === 'number') count++
   return count
 })
 
 function clearAll() {
-  destinations.forEach(r => r.countries.forEach(c => c.checked = false))
-  deals.forEach(d => d.checked = false)
-  physicalRatings.forEach(p => p.checked = false)
-  styles.forEach(s => s.checked = false)
-  themes.forEach(t => t.checked = false)
-  showNewTrips.value = false
+  filters.destinations = []
+  filters.styles = []
+  filters.themes = []
+  filters.physicalRating = []
+  filters.showNewTrips = false
+  filters.durationMin = undefined
+  filters.durationMax = undefined
+  filters.priceMin = undefined
+  filters.priceMax = undefined
+  // update local controls too
   durationMin.value = 1
   durationMax.value = 30
   priceMin.value = 0
   priceMax.value = 10000
+  performSearch()
+}
+
+function getFacetCount(field: string, value: string | number) {
+  const arr = (facets?.value?.[field] || []) as Array<{ value: string; count: number }>
+  const found = arr.find((x: any) => String(x.value) === String(value))
+  return found ? found.count : 0
+}
+
+function toggleDestination(label: string) {
+  filters.destinations = filters.destinations || []
+  const i = filters.destinations.indexOf(label)
+  if (i === -1) filters.destinations.push(label)
+  else filters.destinations.splice(i, 1)
+  performSearch()
+}
+
+function toggleStyle(label: string) {
+  filters.styles = filters.styles || []
+  const i = filters.styles.indexOf(label)
+  if (i === -1) filters.styles.push(label)
+  else filters.styles.splice(i, 1)
+  performSearch()
+}
+
+function toggleTheme(label: string) {
+  filters.themes = filters.themes || []
+  const i = filters.themes.indexOf(label)
+  if (i === -1) filters.themes.push(label)
+  else filters.themes.splice(i, 1)
+  performSearch()
+}
+
+function togglePhysical(value: number) {
+  filters.physicalRating = filters.physicalRating || []
+  const i = filters.physicalRating.indexOf(value)
+  if (i === -1) filters.physicalRating.push(value)
+  else filters.physicalRating.splice(i, 1)
+  performSearch()
+}
+
+function applyDuration() {
+  filters.durationMin = durationMin.value
+  filters.durationMax = durationMax.value
+  performSearch()
+}
+
+function applyPrice() {
+  filters.priceMin = priceMin.value
+  filters.priceMax = priceMax.value
+  performSearch()
+}
+
+function toggleDeal(label: string) {
+  filters.deals = filters.deals || []
+  const i = filters.deals.indexOf(label)
+  if (i === -1) filters.deals.push(label)
+  else filters.deals.splice(i, 1)
+  performSearch()
+}
+
+function toggleShowNewTrips() {
+  filters.showNewTrips = !filters.showNewTrips
+  performSearch()
 }
 </script>
 
@@ -161,7 +242,7 @@ function clearAll() {
             size="16"
           />
           <span class="region-name">{{ region.region }}</span>
-          <span class="region-count">({{ region.countries.reduce((a, c) => a + c.count, 0) }})</span>
+          <span class="region-count">({{ region.countries.reduce((a, c) => a + getFacetCount('destinations', c.label), 0) }})</span>
         </button>
         <Transition name="collapse">
           <div v-show="region.expanded" class="region-countries">
@@ -170,9 +251,14 @@ function clearAll() {
               :key="country.label"
               class="checkbox-item"
             >
-              <input type="checkbox" v-model="country.checked" class="cb" />
+              <input
+                type="checkbox"
+                :checked="(filters.destinations || []).includes(country.label)"
+                @change="() => toggleDestination(country.label)"
+                class="cb"
+              />
               <span class="cb-label">{{ country.label }}</span>
-              <span class="cb-count">{{ country.count }}</span>
+              <span class="cb-count">{{ getFacetCount('destinations', country.label) }}</span>
             </label>
           </div>
         </Transition>
@@ -188,6 +274,7 @@ function clearAll() {
             <input
               type="number"
               v-model.number="durationMin"
+              @change="applyDuration"
               min="1"
               max="30"
               class="range-input"
@@ -202,6 +289,7 @@ function clearAll() {
             <input
               type="number"
               v-model.number="durationMax"
+              @change="applyDuration"
               min="1"
               max="60"
               class="range-input"
@@ -221,6 +309,7 @@ function clearAll() {
             <input
               type="number"
               v-model.number="priceMin"
+              @change="applyPrice"
               min="0"
               class="range-input"
               id="price-min-input"
@@ -234,6 +323,7 @@ function clearAll() {
             <input
               type="number"
               v-model.number="priceMax"
+              @change="applyPrice"
               min="0"
               class="range-input"
               id="price-max-input"
@@ -250,18 +340,28 @@ function clearAll() {
         :key="deal.label"
         class="checkbox-item"
       >
-        <input type="checkbox" v-model="deal.checked" class="cb" />
+        <input
+          type="checkbox"
+          :checked="(filters.deals || []).includes(deal.label)"
+          @change="() => toggleDeal(deal.label)"
+          class="cb"
+        />
         <span class="cb-label">{{ deal.label }}</span>
-        <span class="cb-count">{{ deal.count }}</span>
+        <span class="cb-count">{{ getFacetCount('tags', deal.label) }}</span>
       </label>
     </SearchFilterGroup>
 
     <!-- ── New Trips ─────────────────────────────────────────── -->
     <SearchFilterGroup name="New Trips">
       <label class="checkbox-item">
-        <input type="checkbox" v-model="showNewTrips" class="cb" />
+        <input
+          type="checkbox"
+          :checked="!!filters.showNewTrips"
+          @change="toggleShowNewTrips"
+          class="cb"
+        />
         <span class="cb-label">Show new trips only</span>
-        <span class="cb-count">14</span>
+        <span class="cb-count">{{ getFacetCount('tags', 'new') || 0 }}</span>
       </label>
     </SearchFilterGroup>
 
@@ -272,7 +372,12 @@ function clearAll() {
         :key="pr.value"
         class="checkbox-item checkbox-item--physical"
       >
-        <input type="checkbox" v-model="pr.checked" class="cb" />
+        <input
+          type="checkbox"
+          :checked="(filters.physicalRating || []).includes(pr.value)"
+          @change="() => togglePhysical(pr.value)"
+          class="cb"
+        />
         <span class="cb-label">
           <span class="physical-dots">
             <span
@@ -284,7 +389,7 @@ function clearAll() {
           </span>
           {{ pr.label }}
         </span>
-        <span class="cb-count">{{ pr.count }}</span>
+        <span class="cb-count">{{ getFacetCount('physicalRating', pr.value) }}</span>
       </label>
     </SearchFilterGroup>
 
@@ -295,9 +400,14 @@ function clearAll() {
         :key="s.label"
         class="checkbox-item"
       >
-        <input type="checkbox" v-model="s.checked" class="cb" />
+        <input
+          type="checkbox"
+          :checked="(filters.styles || []).includes(s.label)"
+          @change="() => toggleStyle(s.label)"
+          class="cb"
+        />
         <span class="cb-label">{{ s.label }}</span>
-        <span class="cb-count">{{ s.count }}</span>
+        <span class="cb-count">{{ getFacetCount('styles', s.label) }}</span>
       </label>
     </SearchFilterGroup>
 
@@ -308,9 +418,14 @@ function clearAll() {
         :key="t.label"
         class="checkbox-item"
       >
-        <input type="checkbox" v-model="t.checked" class="cb" />
+        <input
+          type="checkbox"
+          :checked="(filters.themes || []).includes(t.label)"
+          @change="() => toggleTheme(t.label)"
+          class="cb"
+        />
         <span class="cb-label">{{ t.label }}</span>
-        <span class="cb-count">{{ t.count }}</span>
+        <span class="cb-count">{{ getFacetCount('themes', t.label) }}</span>
       </label>
     </SearchFilterGroup>
   </aside>

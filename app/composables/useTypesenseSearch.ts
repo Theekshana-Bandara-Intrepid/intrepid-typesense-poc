@@ -17,6 +17,9 @@ export const useTypesenseSearch = () => {
   // 2. Define reactive state for pagination and sorting
   const page = ref(1)
   const sortBy = ref('recommended') // e.g., 'price-asc', 'duration-desc'
+  // 2.b Grouping (return one document per product)
+  const groupBy = ref<string | null>('productId')
+  const groupLimit = ref<number>(1)
 
   // 3. Define reactive state for active filters
   const filters = reactive({
@@ -55,6 +58,8 @@ export const useTypesenseSearch = () => {
           page: page.value,
           filters,
           sortBy: sortBy.value,
+          group_by: groupBy.value || undefined,
+          group_limit: groupLimit.value || undefined,
         },
       })
       
@@ -92,6 +97,8 @@ export const useTypesenseSearch = () => {
     query,
     page,
     sortBy,
+    groupBy,
+    groupLimit,
     filters,
     results,
     facets,
