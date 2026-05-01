@@ -22,7 +22,8 @@ export function getTypesenseClient(): Client {
   const protocol = process.env.TYPESENSE_PROTOCOL || process.env.NUXT_PUBLIC_TYPESENSE_PROTOCOL || 'https'
   const portValue = process.env.TYPESENSE_PORT || process.env.NUXT_PUBLIC_TYPESENSE_PORT
   const port = portValue ? parseInt(portValue, 10) : protocol === 'https' ? 443 : 8108
-  const apiKey = process.env.TYPESENSE_API_KEY || process.env.NUXT_PUBLIC_TYPESENSE_SEARCH_ONLY_KEY
+  // Prefer an admin key when available, fall back to the public/search-only key.
+  const apiKey = process.env.TYPESENSE_API_KEY || process.env.TYPESENSE_ADMIN_API_KEY || process.env.NUXT_PUBLIC_TYPESENSE_SEARCH_ONLY_KEY
 
   if (!host || !apiKey) {
     throw new Error('Missing Typesense configuration. Ensure TYPESENSE_HOST and TYPESENSE_API_KEY (or NUXT_PUBLIC_TYPESENSE_* equivalents) are set.')

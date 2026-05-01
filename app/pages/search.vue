@@ -1,6 +1,12 @@
 <script setup lang="ts">
 useHead({ title: 'Search Results | Intrepid Travel' })
 
+import { provide } from 'vue'
+
+const search = useTypesenseSearch()
+import useRegion from '~/composables/useRegion'
+const { region } = useRegion()
+
 const {
   query,
   page,
@@ -11,13 +17,28 @@ const {
   isSearching,
   performSearch,
   setPage,
-} = useTypesenseSearch()
+  filters,
+  facets,
+} = search
+
+provide('search', search)
 
 const searchQuery = ref('')
 
-const onSearch = async (value: string) => {
-  query.value = value
-  searchQuery.value = value
+type SearchPayload = string | { query?: string; startDate?: string; endDate?: string }
+
+const onSearch = async (value: SearchPayload) => {
+  if (typeof value === 'string') {
+    query.value = value
+    searchQuery.value = value
+    filters.startDate = undefined
+    filters.endDate = undefined
+  } else {
+    query.value = value.query || ''
+    searchQuery.value = value.query || ''
+    filters.startDate = value.startDate || undefined
+    filters.endDate = value.endDate || undefined
+  }
   setPage(1)
   await performSearch()
 }
@@ -33,6 +54,18 @@ watch(page, async () => {
 
 onMounted(async () => {
   await performSearch()
+})
+const onRegionChanged = async () => {
+  setPage(1)
+  await performSearch()
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') window.addEventListener('region-changed', onRegionChanged)
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') window.removeEventListener('region-changed', onRegionChanged)
 })
 </script>
 
@@ -91,7 +124,7 @@ onMounted(async () => {
             :themes="trip.themes"
             :slug="trip.slug"
             :lowest-price-date="trip.lowestPriceDate"
-            currency="USD"
+            :currency="trip.currency || region.value.code"
           />
         </div>
 
