@@ -1,14 +1,11 @@
 <script setup lang="ts">
-const sortBy = defineModel<string>({ default: 'recommended' })
+const sortBy = defineModel<string>({ default: 'relevance' })
 
 const options = [
-  { label: 'Recommended', value: 'recommended' },
+  { label: 'Relevance', value: 'relevance' },
   { label: 'Price: Low to High', value: 'price-asc' },
   { label: 'Price: High to Low', value: 'price-desc' },
   { label: 'Duration: Short to Long', value: 'duration-asc' },
-  { label: 'Duration: Long to Short', value: 'duration-desc' },
-  { label: 'Rating: Highest', value: 'rating-desc' },
-  { label: 'Newest first', value: 'newest' },
 ]
 </script>
 

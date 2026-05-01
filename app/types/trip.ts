@@ -31,6 +31,7 @@ export interface TripDocument {
   imageUrl: string
   mapUrl: string
   isNewTrip?: boolean
+  currency?: string
 }
 
 /**
